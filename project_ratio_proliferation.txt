@@ -1,0 +1,9 @@
+# Project Ratio Proliferation
+
+[ ] Add proliferation status to Product
+[ ] Tag Recipes by proliferation ability
+[ ] Generate Spray Coater Recipes
+[ ] Generate all proliferated Recipes
+[ ] Add proliferation questions to UI
+[ ] Recipe Crafters might need proliferation info
+[ ] Spray Coater recipes will need belt speeds
