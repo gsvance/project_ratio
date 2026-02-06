@@ -1,0 +1,345 @@
+thoughts.txt
+
+
+
+
+
+graphics with luxor (or something graph-specific)!
+
+better user io with error checking (try, catch, noex)
+
+rate/time conversions
+
+raw materials summaries (like on the wiki)
+
+
+
+
+
+factory web thoughts
+ - create some sort of abstract supertype hierarchy for buildings or nodes
+ - let nodes and edges be mutable whole objects in and of themselves
+   - having the data and the nodes/edges stored separately is not helpful
+ - everything is a node this time round, edges barely exist and only link things
+   - group of buildings? node
+   - splitter? node
+   - supply or demand? node
+   - spray coater? node
+   - conveyor belt between nodes? node
+ - nodes are mutable so they can reference each other in a pointer-like fashion
+ - nodes are a parameterized type so that the .data they carry can be anything
+ - nodes have a limited set of "connection points" or "ports"
+   - each port is limited to being an output or an input
+   - these correspond to the supply, demand, recipe ins/outs, splitting, etc.
+   - each port can only connect to one belt and it keeps a reference
+ - the factory can just be a big UnorderedCollection of mutable nodes
+   - just make sure to keep track of the subsets of each type
+   - and the primary demand node
+ - let edges connect to things as long as the rate is >= requirement
+   - have a function that comes in an adds splitters to overfull edges later on
+
+
+
+use getproperty to compute struct fields???
+ 
+
+
+remember that strings can be continued with a julia line continuation \
+
+
+
+
+
+
+
+
+perhaps just have the graph be a big collection of ports and links!
+
+splitters, recipes, supplies, demands... they can all be groupings of ports
+
+however, they don't have to cope with the graph itself. let the ports worry about that
+
+what does this mean for the subclass hierarchy?
+
+I think it's still valuable to have links and ports as sepearte objects,
+since then links can be moved and ports can exist regardless of connections
+
+every entity group knows which ports it contains,
+and it talks to those ports to find out about any links it has
+
+ports always know what their parent group is. they have some sort of reference
+
+(we also need a "scale node" operation to go along with expand and consolidate)
+
+
+
+
+
+
+
+
+
+
+
+
+
+TOP-DOWN ALGORITHMS APPROACH
+
+designNewFactory()
+	# take user input of a product name and desired production rate (maybe outside of the function)
+	# TODO: ask if we want the output proliferated
+	makeBaseGraphSeed()
+	# maybe let the user pick which node they want to expand next
+	while getAnyExpandableSupplyNode() !== nothing
+		expandSupplyNode()
+		consolidateRedundantNodes()
+		checkForFlowBalance()
+	# display the finished graph in text or in graphics (maybe ouside this function)
+
+makeBaseGraphSeed()
+	Graph()
+	# create demand node with provided rate and product, marked primary
+	# create supply node with same product and rate, marked expandable
+	# connect the supply node output to the demand node input
+	return graph
+
+getAnyExpandableSupplyNode()
+	# return any supply node not flagged as non-expandable
+	# if none exist, return nothing
+	# accomplish this by either scanning all nodes or by popping an element from a vector
+
+expandSupplyNode()
+	# ensure the node is flagged expandable
+	# get the supply node's product and rate
+	# decide on a recipe for the product -- consider any existing nodes as possible sources
+	# if chose existing node, add production to that node and connect it
+	# if no recipe found (or chosen), then not expandable -- flag and return
+	# decide on a facility for the recipe
+	# TODO: decide if we want to proliferate the inputs
+	# make and connect up new demand nodes for any additional outputs
+	# make and connect up new supply nodes for each input
+	# TODO: proliferate inputs if desired
+
+consolidateRedundantNodes()
+	# prune and consolidate the graph, combining redundant production nodes, adding splitters where needed, and avoiding any infinite loops
+	# look for pairs of supply and demand nodes with the same product
+	mergeSupplyAndDemand()
+	# look for identical recipe nodes with possibly different rates
+	mergeRecipeNodes()
+	# find unnecessary splitters?
+	clearSplitter()
+
+mergeSupplyAndDemand()
+	# if matched perfectly, remove both nodes entirely
+	# if supply exceeds demand, remove demand node and splice into supply output edge, then scale down the supply node
+	# if demand exceeds supply, remove supply node and splice out of demand input edge, ghen scale down the demand node
+
+mergeRecipeNodes()
+	# disconnect all inputs and outputs of nodes, then connect them up to new splitter nodes
+	# delete the old nodes
+	# make a new sum node and connect to all splitters
+
+clearSplitter()
+	# remove a splitter that has one input and one output, consolidating the edges on either side into one edge
+
+addProductionToNode()
+	# calculate percent increase required
+	# scale up the number of facilities as needed
+	# split any outputs that don't connect straight to non-primary demand nodes
+
+splitEdge()
+	# check for any existing splitter nodes
+	# if we have one, split from there
+	# otherwise remove the edge, but save its data
+	# create a new splitter node with desired rates
+	# connect new edges where the first edge existed
+
+checkForFlowBalance()
+	# necessary? or just write flow-stable functions and phase this out?
+	# report unattached flows with no edge
+	# report mismatched flows on an edge
+	# report imbalnced splitter flows
+	# report bad recipe node flows
+
+addSupply()
+	# check if there already exists a non-primary demand node we can siphon from
+	# check if there already exists a supply node we can scale up and siphon from
+	# otherwise, create a new supply node
+
+addDemand()
+	# check for existing supply nodes we can contribute to the output from, then scale down the supply
+	# check for existing demand nodes we can scale up and feed into
+	# otherwise, create an actual demand node
+
+
+MY CONCLUSIONS
+ - the operation of "scaling nodes by a factor" would be better as "adding production to a node"
+ - i'll want a graph implementation that makes it easy to add new nodes and edges
+ - it should also be easy to change nodes and edges, which is just deleting followed by adding, so deleting should be fast too
+ - the old NodeRates struct can be obsoleted by lists of a node's ports
+ - we need an efficient way to return any nodes having a given property -- e.g., expandable supply nodes, nodes using a given recipe, nodes with a particular input or output, etc.
+ - maybe re-think demand and supply node names... sink and source? output and input?
+ - is the "nodes with a propery" problem best solved by simple linear search? the filter function? maybe returning an iterator like filter in python?
+ - i could write a function to check for flow balance and verify everything, but it would be better and faster to write careful functions that are always "flow stable"
+ - write explicit functions for adding a new supply or a new demand, which check whether a node already exists that could do this
+
+
+
+
+
+
+
+NEW IDEA FOR A POSSIBLE FACTORY DATA MODEL
+ - don't use a graph (!!)
+ - just have a big list of rates like the production stats window in the game
+ - keep track of contributors to the rates
+ - most contributors are recipes with numbers of facilities and optional proliferation info
+ - just look for negative rates at every stage, let the user pick one, then add a recipe to bring the rate to zero
+ - start with an artificial negative rate for the primary demand, then remove it at the end
+ - list outputs at the end, with byproducts, as well as required inputs (non-expandable negative rates), and all recipes with details
+ - this model is actually more representative of the late-game logistics stations layout than the early-game belt web layout
+ - the existence of splitters becomes totally unneeded!
+ - this is way simpler than a crazy graph data structure -- disadvantages?
+ - disadvantage: less control over the detailed layout of the factory -- the exact layout is left to the user
+ - disadvantage: visualization is gonna be less pretty, though I could *convert* it to a graph at the end
+ - the factory itself could be a rates table of Dict{Product, Vector{Rate}} with the sums of contributors
+ - the contributors (except primary demand) can exist as structs that calcualte their rates on demand... is that best? should i store the rates in the struct and only update them when I change something?
+ - the flags for primary demand or un-expandable supplies could be stored alongside the rates
+ - i was afraid there was something here that wouldn't work, but i think this is actually workable -- i can escape the graph representation
+
+
+OPERATIONS NEEDED FOR FACTORY DATA MODEL
+*i should try to divorce these high-level operations from the actual data model implementation*
+ - set up base factory using primary demand product and desired rate
+ - list all (positive) outputs from the factory (demand nodes)
+ - list all (negative) inputs to the factory (supply nodes)
+ - replace one input requirement with recipe and facilities
+ - report all inputs, outputs, and recipe details (possibly visualized)
+ - recognize when an input can be solved by scaling up existing facilities (one or more producers)
+ - mark an input as "don't expand with any recipe"
+ - TODO: allow recipes to specifiy proliferation and require related inputs
+ - low-level: add a particular recipe or demand
+ - low-level: delete a particular recipe or demand
+ - figure out the number of facilities needed for adding a recipe
+
+
+OUTLINE OF NEW DATA MODEL ITSELF
+
+struct Contributor
+	recipe
+	n facilities
+	facility
+	overall calculated rates Dict{Product, Rate}
+	# TODO: proliferation info for recipe inputs
+
+struct Factory
+	primary product
+	primary product rate
+	contributors vector
+	overall calculated rates Dict{Product, Rate}
+	ignore flags for negative rates Dict{Product, Bool}
+	# TODO: output proflieration info for primary product
+
+
+TOP-DOWN ALGORITHMS APPROACH WITH NEW DATA MODEL
+
+main() -- abstracted
+	createDatabase()
+	*possibly loop as long as user wants to provide new products*
+		getProductAndRateFromUser()
+		generateFactoryStepByStep()
+		printOrVisualizeFactory()
+
+createDatabase() -- already implemented
+	# TODO: add proliferators.toml file and proliferators data to the database
+
+getProductAndRateFromUser() -- user interface
+	# request text input from user keyboard
+	# match against the product database or notice nothing entered
+	# ask again if it doesn't match any product
+	# maybe offer useful product matches somehow based on what was entered?
+	# request text input from user keyboard
+	# match against rate numbers and units
+	# TODO: ask if we want the output product to be proliferated
+	return product and rate, or nothing
+
+generateFactoryStepByStep() -- abstracted
+	createBaseFactorySeed()
+	makeListOfUnsatisfiedInputs()
+	while list length > 0
+		letUserChooseOneInputOrEnd()
+		if end
+			ignoreAllInputs()
+		else
+			expandAnInput()
+		makeListOfUnsatisfiedInputs()
+
+printOrVisualizeFactory() -- user interface-ish
+	# call a nicely-indented show method for the factory
+	# or convert it to a graph and show that visually
+	# or come up with another graphical display theme
+
+createBaseFactorySeed() -- model-dependent
+	Factory()
+	# any other setup, or let the constructor handle it all?
+	return factory
+
+makeListOfUnsatisfiedInputs() -- model-dependent
+	# go through overall calculated rates dict of factory
+	# return product/rate pairs where the rate is negative
+
+letUserChooseOneInputOrEnd() -- user interface
+	# present list to user with an ignore all option
+	return user_choice
+
+markIgnore() -- model-dependent
+	# mark one particular rate as ignore flag = true
+
+ignoreAllInputs() -- model-dependent
+	# mark all rates as ignore flag = true
+
+expandAnInput() -- abstracted
+	checkForExistingContributor()
+	if exists and user wants
+		scaleContributor()
+		return
+	determineRecipe()
+	if no recipe
+		markIgnore()
+		return
+	determineFacility()
+	addProducer()
+	# TODO: also handle proliferation of inputs
+
+checkForExistingContributor() -- model-dependent
+	# iterate through contributors vector
+	return 0, 1, or more found contributors with given output product
+
+scaleContributor() -- model-dependent
+	# add production to an existing contributor
+	# recalculate the rates of the contributor and the factory
+
+determineRecipe() -- mostly implemented
+	queryDatabaseForRecipes()
+	if none
+		return nothing
+	# ask user to choose one recipe or "always ignore this input for this factory"
+	return user_choice
+
+determineFacility() -- mostly implemented
+	queryDatabaseForFacilities()
+	if only one
+		return it
+	else
+		return one the user picks
+
+addProducer() -- model-dependent
+	Contributor()
+	addToFactory()
+
+user interface elements for input:
+ - get general input text that passes a particular test, ask repeatedly on fail, maybe provide suggestions (use try-catch, maybe edit distance)
+ - choose exactly one option from a list of options presented, maybe with one "extra" option (try the repl terminal menus for this)
+ - answer a yes-or-no question (could be implemented using either of the above)
+
+

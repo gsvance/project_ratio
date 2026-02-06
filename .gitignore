@@ -1,0 +1,5 @@
+# The random Julia PDF file in this folder
+julia-*.pdf
+
+# The game data files (for now)
+game_data/
