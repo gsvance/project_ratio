@@ -3,3 +3,6 @@ julia-*.pdf
 
 # The game data files (for now)
 game_data/
+
+# Pre-compiled Python files
+__pycache__/
