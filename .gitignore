@@ -6,3 +6,7 @@ game_data/
 
 # Pre-compiled Python files
 __pycache__/
+
+# Rust nonsense
+Cargo.lock
+target/
