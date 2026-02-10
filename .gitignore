@@ -1,12 +1,12 @@
-# The random Julia PDF file in this folder
-julia-*.pdf
+# The random Julia PDF file
+/julia_code/julia-*.pdf
 
 # The game data files (for now)
-game_data/
+/game_data/
 
 # Pre-compiled Python files
 __pycache__/
 
 # Rust nonsense
-Cargo.lock
-target/
+/project_rustio/Cargo.lock
+/project_rustio/target/

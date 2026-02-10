@@ -9,7 +9,7 @@ using TOML
 # Locations of Game Data Files #
 ################################
 
-const GAMEDATADIRECTORY = "game_data"
+const GAMEDATADIRECTORY = joinpath("..", "game_data")
 
 const FACILITIESFILENAME = joinpath(GAMEDATADIRECTORY, "facilities.toml")
 const PRODUCTSFILENAME = joinpath(GAMEDATADIRECTORY, "products.toml")
